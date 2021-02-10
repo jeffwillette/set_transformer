@@ -3,6 +3,56 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 
+class PermEquiMax(nn.Module):
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.Gamma = nn.Linear(in_dim, out_dim)
+
+    def forward(self, x):
+        xm, _ = x.max(1, keepdim=True)
+        x = self.Gamma(x-xm)
+        return x
+
+
+class PermEquiMax2(nn.Module):
+  def __init__(self, in_dim, out_dim):
+    super().__init__()
+    self.Gamma = nn.Linear(in_dim, out_dim)
+    self.Lambda = nn.Linear(in_dim, out_dim, bias=False)
+
+  def forward(self, x):
+    xm, _ = x.max(1, keepdim=True)
+    xm = self.Lambda(xm) 
+    x = self.Gamma(x)
+    x = x - xm
+    return x
+
+
+class PermEquiMean(nn.Module):
+  def __init__(self, in_dim, out_dim):
+    super().__init__()
+    self.Gamma = nn.Linear(in_dim, out_dim)
+
+  def forward(self, x):
+    xm = x.mean(1, keepdim=True)
+    x = self.Gamma(x-xm)
+    return x
+
+
+class PermEquiMean2(nn.Module):
+  def __init__(self, in_dim, out_dim):
+    super().__init__()
+    self.Gamma = nn.Linear(in_dim, out_dim)
+    self.Lambda = nn.Linear(in_dim, out_dim, bias=False)
+
+  def forward(self, x):
+    xm = x.mean(1, keepdim=True)
+    xm = self.Lambda(xm) 
+    x = self.Gamma(x)
+    x = x - xm
+    return x
+
+
 class MAB(nn.Module):
     def __init__(self, dim_Q, dim_K, dim_V, num_heads, ln=False):
         super(MAB, self).__init__()

@@ -1,5 +1,14 @@
 # set_transformer
 
+# NOTES:
+
+- the PMA pooling layer is permutation invariant because the one seed vector will always consist of
+  QK^T which is (1, N). This is then softmaxxed like in regula MAB and left multiplied by V
+- V is (N, x) and the N's have the same permuation as the N's in K. so then we end up with a 
+  weighted combination of features where the weights are equivariant in N which leads to an invariant
+  pooling operation
+
+
 Official PyTorch implementation of the paper 
 [Set Transformer: A Framework for Attention-based Permutation-Invariant Neural Networks
 ](http://proceedings.mlr.press/v97/lee19d.html).

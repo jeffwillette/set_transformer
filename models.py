@@ -1,18 +1,24 @@
 from modules import *
 
+types = {'max': PermEquiMax, 'max2': PermEquiMax2, 'mean': PermEquiMean, 'mean2': PermEquiMean2}
+
 class DeepSet(nn.Module):
-    def __init__(self, dim_input, num_outputs, dim_output, dim_hidden=128):
+    def __init__(self, dim_input, num_outputs, dim_output, dim_hidden=128, layer_type='max'):
         super(DeepSet, self).__init__()
         self.num_outputs = num_outputs
         self.dim_output = dim_output
+
+        layer = types[layer_type]
+
         self.enc = nn.Sequential(
-                nn.Linear(dim_input, dim_hidden),
+                layer(dim_input, dim_hidden),
                 nn.ReLU(),
-                nn.Linear(dim_hidden, dim_hidden),
+                layer(dim_hidden, dim_hidden),
                 nn.ReLU(),
-                nn.Linear(dim_hidden, dim_hidden),
+                layer(dim_hidden, dim_hidden),
                 nn.ReLU(),
-                nn.Linear(dim_hidden, dim_hidden))
+                layer(dim_hidden, dim_hidden))
+
         self.dec = nn.Sequential(
                 nn.Linear(dim_hidden, dim_hidden),
                 nn.ReLU(),
@@ -20,7 +26,8 @@ class DeepSet(nn.Module):
                 nn.ReLU(),
                 nn.Linear(dim_hidden, dim_hidden),
                 nn.ReLU(),
-                nn.Linear(dim_hidden, num_outputs*dim_output))
+                nn.Linear(dim_hidden, num_outputs*dim_output)
+            )
 
     def forward(self, X):
         X = self.enc(X).mean(-2)
@@ -29,11 +36,12 @@ class DeepSet(nn.Module):
 
 class SetTransformer(nn.Module):
     def __init__(self, dim_input, num_outputs, dim_output,
-            num_inds=32, dim_hidden=128, num_heads=4, ln=False):
+            num_inds=16, dim_hidden=128, num_heads=4, ln=False):
         super(SetTransformer, self).__init__()
         self.enc = nn.Sequential(
                 ISAB(dim_input, dim_hidden, num_heads, num_inds, ln=ln),
-                ISAB(dim_hidden, dim_hidden, num_heads, num_inds, ln=ln))
+                ISAB(dim_hidden, dim_hidden, num_heads, num_inds, ln=ln)
+                )
         self.dec = nn.Sequential(
                 PMA(dim_hidden, num_heads, num_outputs, ln=ln),
                 SAB(dim_hidden, dim_hidden, num_heads, ln=ln),

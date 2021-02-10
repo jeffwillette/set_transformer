@@ -11,6 +11,7 @@ import time
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from models import SetTransformer, DeepSet
+from consistent import ConsistentModel
 from mixture_of_mvns import MixtureOfMVNs
 from mvn_diag import MultivariateNormalDiag
 
@@ -19,8 +20,8 @@ parser.add_argument('--mode', type=str, default='train')
 parser.add_argument('--num_bench', type=int, default=100)
 parser.add_argument('--net', type=str, default='set_transformer')
 parser.add_argument('--B', type=int, default=10)
-parser.add_argument('--N_min', type=int, default=300)
-parser.add_argument('--N_max', type=int, default=600)
+parser.add_argument('--N_min', type=int, default=100)
+parser.add_argument('--N_max', type=int, default=500)
 parser.add_argument('--K', type=int, default=4)
 parser.add_argument('--gpu', type=str, default='0')
 parser.add_argument('--lr', type=float, default=1e-3)
@@ -46,8 +47,12 @@ if args.net == 'set_transformer':
     net = SetTransformer(D, K, dim_output).cuda()
 elif args.net == 'deepset':
     net = DeepSet(D, K, dim_output).cuda()
+elif args.net == "consistent":
+    h = [128 for _ in range(1)]
+    net = ConsistentModel(in_dim=D, out_dim=dim_output, num_outputs=K, hidden_dim=128, K=[512], h=[128], d=[128], d_hat=[128], _slots="Learned", g='max', ln=False).cuda()
 else:
     raise ValueError('Invalid net {}'.format(args.net))
+
 benchfile = os.path.join('benchmark', 'mog_{:d}.pkl'.format(K))
 
 def generate_benchmark():
@@ -90,7 +95,9 @@ def train():
         N = np.random.randint(N_min, N_max)
         X = mog.sample(B, N, K)
         ll = mog.log_prob(X, *mvn.parse(net(X)))
-        loss = -ll
+        # attn_loss = net.attn_loss()
+        # print(f"attn_loss: {attn_loss}")
+        loss = -ll # + attn_loss
         loss.backward()
         optimizer.step()
 
@@ -99,6 +106,7 @@ def train():
                     t, optimizer.param_groups[0]['lr'])
             line += test(bench, verbose=False)
             line += ' ({:.3f} secs)'.format(time.time()-tick)
+            # line += f' attn loss: {attn_loss.item()}'
             tick = time.time()
             logger.info(line)
 
